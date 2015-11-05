@@ -1,37 +1,51 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
-	"net/url"
 )
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 
-	_, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	if _, ok := err.(websocket.HandshakeError); ok {
-		http.Error(w, "Not a websocket handshake", 400)
-		return
-	} else if err != nil {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
 		return
 	}
 
-	playerName := "Player"
-	params, _ := url.ParseQuery(r.URL.RawQuery)
-	if len(params["name"]) > 0 {
-		playerName = params["name"][0]
-	}
+	for {
+		messageType, p, err := conn.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
-	log.Printf("Player: %s has joined to game", playerName)
+		fmt.Printf("Received: %s\n", string(p))
+
+		err = conn.WriteMessage(messageType, p)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
 }
 
 func main() {
 	log.Println("wssrv starting...")
 
-	http.HandleFunc("/", wsHandler)
+	http.HandleFunc("/echo", wsHandler)
 
-	if err := http.ListenAndServe(":8181", nil); err != nil {
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal("ListenAndServe:", err)
 	}
 }

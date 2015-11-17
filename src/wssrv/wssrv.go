@@ -1,17 +1,44 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
+	"math"
 	"net/http"
 )
+
+type Point struct {
+	Long float64 `json:"longitude"`
+	Lat  float64 `json:"latitude"`
+}
+
+type PlayerState struct {
+	Point Point
+}
+
+type Object struct {
+	Name  string
+	Point Point
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
+	},
+}
+
+var objects = [...]Object{
+	{
+		Name:  "Тайник",
+		Point: Point{Long: 38.888758, Lat: 47.221259},
+	},
+	{
+		Name:  "Контейнер",
+		Point: Point{Long: 38.888338, Lat: 47.222534},
 	},
 }
 
@@ -32,7 +59,32 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Printf("Received: %s\n", string(p))
 
-		err = conn.WriteMessage(messageType, p)
+		point := &Point{}
+		if err := json.Unmarshal(p, point); err != nil {
+			log.Println(err)
+			return
+		}
+
+		fmt.Printf("%v\n", point)
+
+		var visibleObjects []Object
+		for _, eachObject := range objects {
+			if math.Abs(eachObject.Point.Long-point.Long) <= 0.0005 ||
+				math.Abs(eachObject.Point.Lat-point.Lat) <= 0.0005 {
+
+				visibleObjects = append(visibleObjects, eachObject)
+			}
+		}
+
+		resp, err := json.Marshal(visibleObjects)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		fmt.Printf("Resp: %s\n", string(resp))
+
+		err = conn.WriteMessage(messageType, resp)
 		if err != nil {
 			log.Println(err)
 			return

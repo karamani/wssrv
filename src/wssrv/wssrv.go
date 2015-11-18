@@ -20,6 +20,7 @@ type PlayerState struct {
 
 type Object struct {
 	Name  string
+	Type  string
 	Point Point
 }
 
@@ -33,12 +34,19 @@ var upgrader = websocket.Upgrader{
 
 var objects = [...]Object{
 	{
-		Name:  "Тайник",
+		Name:  "Мухомор",
+		Type:  "fung",
 		Point: Point{Long: 38.888758, Lat: 47.221259},
 	},
 	{
 		Name:  "Контейнер",
+		Type:  "container",
 		Point: Point{Long: 38.888338, Lat: 47.222534},
+	},
+	{
+		Name:  "Поганка",
+		Type:  "fung",
+		Point: Point{Long: 38.889159, Lat: 47.221054},
 	},
 }
 
@@ -69,8 +77,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 		var visibleObjects []Object
 		for _, eachObject := range objects {
-			if math.Abs(eachObject.Point.Long-point.Long) <= 0.0005 ||
-				math.Abs(eachObject.Point.Lat-point.Lat) <= 0.0005 {
+			if math.Abs(eachObject.Point.Long-point.Long) <= 0.0003 ||
+				math.Abs(eachObject.Point.Lat-point.Lat) <= 0.0003 {
 
 				visibleObjects = append(visibleObjects, eachObject)
 			}
